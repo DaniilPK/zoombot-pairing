@@ -1,3 +1,7 @@
+import io
+import json
+import os
+import shutil
 import threading
 import subprocess, csv, sys
 
@@ -6,11 +10,12 @@ from datetime import datetime
 from time import sleep
 import requests
 
-local_filename = 'ZoomBuddy.csv'
-url = 'https://docs.google.com/spreadsheets/d/1aQJ9ruOjQeThzvn4lfHGkohvvcWvd_F-/export?format=csv'
+table_url = 'https://docs.google.com/spreadsheets/d/1aQJ9ruOjQeThzvn4lfHGkohvvcWvd_F-/export?format=csv'
+
+VERSION = "v1.0.1"
 
 
-class Meeting():
+class Meeting:
 
     def __init__(self):
         self.file, self.csvfile = self.open_data()
@@ -24,6 +29,7 @@ class Meeting():
             self.manual()
         elif SelectManually.lower() == 'no' or SelectManually.lower() == 'n':
             print('auto start. The next check in ' + ((str)(self.calculate_initial_delay())) + ' minutes')
+            self.auto()
             threading.Timer(self.calculate_initial_delay() * 60, self.schedule_auto).start()
         else:
             print('Please enter Y(yes) or N(no)')
@@ -45,22 +51,13 @@ class Meeting():
 
     def open_data(self):
         try:
-            response = requests.get(url)
+            response = requests.get(table_url)
             response.raise_for_status()
 
-            with open(local_filename, 'wb') as f:
-                f.write(response.content)
-
-            try:
-                file = open(local_filename, 'r')
-                csvfile = csv.reader(file)
-                next(csvfile)
-                return file, csvfile
-            except FileNotFoundError:
-                print(local_filename + " Does Not Exist!")
-                sleep(1)
-                sys.exit(0)
-
+            csvfile = io.StringIO(response.text)
+            csv_reader = csv.reader(csvfile)
+            next(csv_reader)
+            return csvfile, csv_reader
         except requests.exceptions.RequestException as e:
             print(f"Ошибка при загрузке файла: {e}")
             sys.exit(0)
@@ -74,8 +71,8 @@ class Meeting():
 
         for row in self.csvfile:
             try:
-                classtime = int(row[day + 4].split(":")[0]) * 60 + int(row[day + 4].split(":")[1])
-                if (time > classtime - 10) and (time < classtime + 10):
+                classTime = int(row[day + 4].split(":")[0]) * 60 + int(row[day + 4].split(":")[1])
+                if (time > classTime - 15) and (time < classTime + 15):
                     meetingID = row[2]
                     try:
                         passWD = row[3]
@@ -116,6 +113,7 @@ class Meeting():
                 sys.exit(0)
             sys.exit(1)
         self.connect(meetingID, passWD)
+        self.start()
 
     def connect(self, meetingID, passWD):
         command = "%appdata%\\Zoom\\bin\\Zoom.exe --url=zoommtg://zoom.us/join?confno=" + meetingID + "^&pwd=" + passWD
@@ -125,5 +123,54 @@ class Meeting():
             pass
 
 
+class UpdateFile:
+    def __init__(self):
+        self.URL = "https://github.com/DaniilPK/zoombot-pairing"
+        self.API_URL = 'https://api.github.com/repos/DaniilPK/zoombot-pairing/releases/latest'
+        self.FILE_NAME = "ZoomBotPairing.exe"
+
+    def update_process(self):
+        latest_version, download_url = self.get_latest_release()
+
+        if int(VERSION.split("v")[1].replace('.', '')) < int(latest_version.split("v")[1].replace('.', '')):
+            print(f"Найдена новая версия: {latest_version}. Обновление...")
+            self.update_application(download_url)
+        else:
+            print("Вы используете последнюю версию.")
+
+    def get_latest_release(self):
+        response = requests.get(self.API_URL)
+        release_info = response.json()
+        latest_version = release_info['tag_name']
+        asset = next((item for item in release_info['assets'] if item['name'] == self.FILE_NAME), None)
+        if asset:
+            return latest_version, asset['browser_download_url']
+        return None, None
+
+    def download_file(self, url, local_filename):
+        with requests.get(url, stream=True) as r:
+            with open(local_filename, 'wb') as f:
+                shutil.copyfileobj(r.raw, f)
+
+    def update_application(self, download_url):
+        new_file = self.FILE_NAME + ".new"
+        self.download_file(download_url, new_file)
+
+        with open("update.bat", "w") as bat_file:
+            bat_file.write(f"""
+            @echo off
+            timeout /t 2 /nobreak > nul
+            taskkill /f /im "{self.FILE_NAME}" > nul 2>&1
+            timeout /t 2 /nobreak > nul
+            move /y "{new_file}" "{self.FILE_NAME}"
+            start "" "{self.FILE_NAME}"
+            del "%~f0"
+            """)
+
+        subprocess.Popen("update.bat", shell=True)
+        sys.exit()
+
+
 if __name__ == "__main__":
+    UpdateFile().update_process()
     Meeting()
