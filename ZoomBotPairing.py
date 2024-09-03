@@ -20,6 +20,8 @@ class Meeting:
     def __init__(self):
         self.file, self.csvfile = self.open_data()
 
+        self.weekNumber = int(input('Select Week Number: '))
+
         self.start()
 
     def start(self):
@@ -70,17 +72,30 @@ class Meeting:
         time = int(datetime.now().strftime("%H")) * 60 + int(datetime.now().strftime("%M"))
 
         for row in self.csvfile:
-            try:
-                classTime = int(row[day + 4].split(":")[0]) * 60 + int(row[day + 4].split(":")[1])
-                if (time > classTime - 15) and (time < classTime + 15):
-                    meetingID = row[2]
-                    try:
-                        passWD = row[3]
-                    except:
-                        passWD = ""
-                    self.connect(meetingID, passWD)
-            except ValueError:
-                pass
+
+            times = row[day + 4].split(";")
+            selected_times = []
+
+            for time_part in times:
+                if time_part.startswith("I:") and self.weekNumber == 1:
+                    selected_times.append(time_part[2:])
+                elif time_part.startswith("II:") and self.weekNumber == 2:
+                    selected_times.append(time_part[3:])
+                elif not time_part.startswith("I:") and not time_part.startswith("II:"):
+                    selected_times.append(time_part)
+
+            for selected_time in selected_times:
+                try:
+                    classTime = int(selected_time.split(":")[0]) * 60 + int(selected_time.split(":")[1])
+                    if (time > classTime - 15) and (time < classTime + 15):
+                        meetingID = row[2]
+                        try:
+                            passWD = row[3]
+                        except:
+                            passWD = ""
+                        self.connect(meetingID, passWD)
+                except ValueError:
+                    pass
 
     def manual(self):
 
