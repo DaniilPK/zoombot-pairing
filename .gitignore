@@ -1,0 +1,13 @@
+#data
+ZoomData.csv
+README.html
+/assets/*.psd
+Ideas.md
+Test.py
+
+#Pyinstaller output
+/__pycache__
+/build
+ZoomBuddy.spec
+ZoomBuddy.exe
+Build.bat
