@@ -1,13 +1,10 @@
 import io
-import json
-import os
 import shutil
 import threading
 import subprocess, csv, sys
 
 from os import system
 from datetime import datetime
-from time import sleep
 import requests
 
 table_url = 'https://docs.google.com/spreadsheets/d/1aQJ9ruOjQeThzvn4lfHGkohvvcWvd_F-/export?format=csv'
@@ -18,13 +15,12 @@ VERSION = "v1.0.1"
 class Meeting:
 
     def __init__(self):
-        self.file, self.csvfile = self.open_data()
-
         self.weekNumber = int(input('Select Week Number: '))
 
         self.start()
 
     def start(self):
+        system("cls||clear")
         SelectManually = input('Select Meeting manually? (Y/N) ')
         if SelectManually.lower() == 'yes' or SelectManually.lower() == 'y':
             system("cls||clear")
@@ -98,6 +94,7 @@ class Meeting:
                     pass
 
     def manual(self):
+        self.file, self.csvfile = self.open_data()
 
         print("Choose an option below:")
         for row in self.csvfile:
