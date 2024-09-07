@@ -9,7 +9,7 @@ import requests
 
 table_url = 'https://docs.google.com/spreadsheets/d/1aQJ9ruOjQeThzvn4lfHGkohvvcWvd_F-/export?format=csv'
 
-VERSION = "v1.0.1"
+VERSION = "v1.0.2"
 
 
 class Meeting:
@@ -98,13 +98,15 @@ class Meeting:
 
         print("Choose an option below:")
         for row in self.csvfile:
-            print(row[0] + " [" + row[1] + "]")
+            print(
+                row[0].encode('ISO-8859-1').decode('utf-8') + " [" + row[1].encode('ISO-8859-1').decode('utf-8') + "]")
         self.file.seek(1)
 
         meetingname = input("Enter a Meeting: ")
 
         for row in self.csvfile:
-            if (meetingname == row[1]):
+            if meetingname == row[1].encode('ISO-8859-1').decode('utf-8') or meetingname == row[0].encode(
+                    'ISO-8859-1').decode('utf-8'):
                 meetingID = row[2]
                 try:
                     passWD = row[3]
